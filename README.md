@@ -16,7 +16,8 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
 - **Framework**: Spring Boot 4.0.0
 - **Build Tool**: Gradle
 - **Data Storage**: In-memory (HashMap/List)
-- **Additional**: Lombok, H2 Console (for development)
+- **Testing**: JUnit 5, Mockito
+- **Additional**: Lombok, MapStruct, H2 Console (for development)
 
 ## Prerequisites
 
@@ -28,17 +29,17 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
 1. **Clone or download the project**
    ```bash
    git clone <repository-url>
-   cd ms_books/test
+   cd moneygram_test
    ```
 
 2. **Build the project**
    ```bash
-   ./gradlew build
+   bash gradlew build
    ```
 
 3. **Run the application**
    ```bash
-   ./gradlew bootRun
+   bash gradlew bootRun
    ```
 
    The application will start on `http://localhost:8080`
@@ -60,15 +61,25 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
 ```json
 {
   "id": 1,
-  "title": "The Great Gatsby",
-  "author": "F. Scott Fitzgerald",
-  "isbn": "978-0-7432-7356-5",
-  "publishedYear": 1925,
-  "genre": "Fiction"
+  "title": "Don Quixote",
+  "author": "Miguel de Cervantes",
+  "isbn": "978-84-376-0494-7",
+  "publishedYear": 1605,
+  "genre": "Novel"
 }
 ```
 
 ## Testing the API
+
+### Using the Test Script
+
+Run the automated integration test script:
+
+```bash
+bash test-api.sh
+```
+
+This script will test all CRUD operations and validate HTTP status codes.
 
 ### Using curl
 
@@ -77,11 +88,11 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
    curl -X POST http://localhost:8080/api/books \
      -H "Content-Type: application/json" \
      -d '{
-       "title": "The Great Gatsby",
-       "author": "F. Scott Fitzgerald",
-       "isbn": "978-0-7432-7356-5",
-       "publishedYear": 1925,
-       "genre": "Fiction"
+       "title": "Don Quixote",
+       "author": "Miguel de Cervantes",
+       "isbn": "978-84-376-0494-7",
+       "publishedYear": 1605,
+       "genre": "Novel"
      }'
    ```
 
@@ -100,11 +111,11 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
    curl -X PUT http://localhost:8080/api/books/1 \
      -H "Content-Type: application/json" \
      -d '{
-       "title": "The Great Gatsby - Updated",
-       "author": "F. Scott Fitzgerald",
-       "isbn": "978-0-7432-7356-5",
-       "publishedYear": 1925,
-       "genre": "Classic Fiction"
+       "title": "Don Quixote de la Mancha",
+       "author": "Miguel de Cervantes Saavedra",
+       "isbn": "978-84-376-0494-7",
+       "publishedYear": 1605,
+       "genre": "Classic Novel"
      }'
    ```
 
@@ -113,18 +124,25 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
    curl -X DELETE http://localhost:8080/api/books/1
    ```
 
-### Using Postman
-
-1. Import the following collection or create requests manually
-2. Set base URL to `http://localhost:8080`
-3. Use the endpoints listed above with appropriate HTTP methods
-
 ## Development
 
-### Running Tests
+### Running Unit Tests
 
 ```bash
-./gradlew test
+bash gradlew test
+```
+
+View test reports:
+```bash
+open build/reports/tests/test/index.html
+```
+
+### Running Specific Tests
+
+```bash
+bash gradlew test --tests BookControllerTest
+bash gradlew test --tests BookServiceTest
+bash gradlew test --tests BookRepositoryTest
 ```
 
 ### Development Mode
@@ -132,7 +150,7 @@ A simple REST API for managing a book catalog built with Java and Spring Boot. T
 The application includes Spring Boot DevTools for automatic restart during development:
 
 ```bash
-./gradlew bootRun
+bash gradlew bootRun
 ```
 
 ### Project Structure
@@ -143,13 +161,30 @@ src/
 │   ├── java/com/moneygram/tecnical/test/
 │   │   ├── TestApplication.java          # Main application class
 │   │   ├── controller/                   # REST controllers
+│   │   │   └── BookController.java
 │   │   ├── model/                        # Book entity/model
+│   │   │   └── Book.java
+│   │   ├── dto/                          # Data transfer objects
+│   │   │   └── BookRequest.java
 │   │   ├── service/                      # Business logic
-│   │   └── repository/                   # Data access layer
+│   │   │   └── BookService.java
+│   │   ├── repository/                   # Data access layer
+│   │   │   └── BookRepository.java
+│   │   ├── mapper/                       # MapStruct mappers
+│   │   │   └── BookMapper.java
+│   │   └── exception/                    # Exception handling
+│   │       ├── GlobalExceptionHandler.java
+│   │       └── BookNotFoundException.java
 │   └── resources/
 │       └── application.properties        # Configuration
 └── test/
     └── java/                            # Unit tests
+        ├── controller/
+        │   └── BookControllerTest.java
+        ├── service/
+        │   └── BookServiceTest.java
+        └── repository/
+            └── BookRepositoryTest.java
 ```
 
 ## Configuration
@@ -164,7 +199,7 @@ server.port=8080
 ## Data Storage
 
 This application uses in-memory data storage:
-- Books are stored in a `HashMap<Long, Book>` for fast ID-based lookups
+- Books are stored in a `ConcurrentHashMap<Long, Book>` for fast ID-based lookups
 - Data is lost when the application restarts
 - No external database configuration required
 
@@ -177,13 +212,24 @@ The API returns appropriate HTTP status codes:
 - `404 Not Found` - Book not found
 - `400 Bad Request` - Invalid request data
 
-## Future Enhancements
+Error handling is centralized in `GlobalExceptionHandler` using `@ControllerAdvice`.
 
-- Add input validation
-- Implement pagination for book listings
-- Add search and filtering capabilities
-- Include API documentation with Swagger/OpenAPI
-- Add comprehensive unit and integration tests
+## Architecture
+
+The application follows a layered architecture:
+- **Controller Layer**: Handles HTTP requests and responses
+- **Service Layer**: Contains business logic
+- **Repository Layer**: Manages data access
+- **Exception Layer**: Centralized error handling
+
+## Testing
+
+The project includes comprehensive unit tests:
+- **BookControllerTest**: Tests REST endpoints with Mockito
+- **BookServiceTest**: Tests business logic with mocked dependencies
+- **BookRepositoryTest**: Tests in-memory data operations
+
+All tests use JUnit 5 and Mockito for mocking.
 
 ## License
 
